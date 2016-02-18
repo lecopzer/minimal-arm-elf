@@ -1,12 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <sys/mman.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <dlfcn.h>
 #define ALIGN 4096
 #define ELF32_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
 
