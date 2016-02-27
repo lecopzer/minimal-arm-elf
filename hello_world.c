@@ -14,25 +14,40 @@ int main() {
     buf = malloc(poolsz);
     o = buf = (char*)(((int)buf + ALIGN - 1)  & -ALIGN);
     je = code;
-    *(int*)je = 0xe3a07001;       // mov     r7, #1
-    je +=4;
-    *(int*)je = 0xe3060195;       // mov     r0, #1
+//    *(int*)je = 0xe3a07001;       // mov     r7, #1
+//    *(int*)je = 0xe1a0700d;       // mov     r7, sp
+//    je +=4;
+    *(int*)je = 0xe3070078;       // mov     r0, #1
     je +=4;
     *(int*)je = 0xe34f0664;       // mov     r0, #1
+    je +=4;
+    *(int*)je = 0xe3a01000;       // mov     r0, #1
+    je +=4;
+    *(int*)je = 0xe3a02000;       // mov     r0, #1
+    je +=4;
+		char* bl_printf_movw = je;
+    je +=4;
+		char* bl_printf_movt = je;
+    je +=4;
+    *(int*)je = 0xe28fe000;       // add		lr, pc ,#0
+    je +=4;
+//    *(int*)je = 0xe59cf000;       // ldr		pc, [ip]
+    *(int*)je = 0xe1a0f00c;       // mov		pc, ip
     je +=4;
 		char* bl_rand_movw = je;
     je +=4;
 		char* bl_rand_movt = je;
     je +=4;
-    *(int*)je = 0xe59cf000;       // ldr		pc, [ip]
+    *(int*)je = 0xe28fe000;       // add		lr, pc ,#0
+    je +=4;
+//    *(int*)je = 0xe59cf000;       // ldr		pc, [ip]
+    *(int*)je = 0xe1a0f00c;       // mov		pc, ip
     je +=4;
     *(int*)je = 0xe3a00000;       // mov     r0, #0
     je +=4;
+    *(int*)je = 0xe3a07001;       // mov     r7, #1
+		je +=4;
     *(int*)je = 0xef000000;       // svc 0
-    je +=4;
-		char* bl_printf_movw = je;
-    je +=4;
-		char* bl_printf_movt = je;
     je +=4;
 
 		// elf header
@@ -47,7 +62,7 @@ int main() {
     *(int*)o = 0x5000402;   o = o + 4; // e_flags
     *o++ = 52; *o++ = 0;
     *o++ = 32; *o++ = 0; *o++ = 4; *o++ = 0; // e_phentsize & e_phnum
-    *o++ = 40; *o++ = 0; *o++ = 13; *o++ = 0; // e_shentsize & e_shnum
+    *o++ = 40; *o++ = 0; *o++ = 14; *o++ = 0; // e_shentsize & e_shnum
     *o++ =  1; *o++ = 0;
 		phdr = o;
 
@@ -96,7 +111,7 @@ int main() {
 
 		*(int*)v_dym = (int)to;
 		*(int*)(v_dym + 4) = (int)to;
-		char* v_strtab, *v_symtab, *_v_rel, *_v_got, *__v_rel,*_v_symtab;
+		char* v_strtab, *v_symtab, *_v_rel, *_v_got, *__v_rel,*_v_symtab, *_v_plt;
 		char* s_strtab, *_s_rel, *__s_rel, *_s_plt,*_s_symtab;
 		int s_symtab;
 		// .dynamic
@@ -110,9 +125,9 @@ int main() {
     *(int*)to = 18; to = to + 4; _s_rel = to; to = to + 4;
     *(int*)to = 19; to = to + 4; __s_rel = to; to = to + 4;
     *(int*)to = 3; to = to + 4; _v_got = to; to = to + 4;
-//    *(int*)to = 2; to = to + 4; *(int*)to = 8; to = to + 4;
-//    *(int*)to = 20; to = to + 4; *(int*)to = 17; to = to + 4;
-//    *(int*)to = 23; to = to + 4; __v_rel = to; to = to + 4;
+    *(int*)to = 2; to = to + 4; *(int*)to = 16; to = to + 4;
+    *(int*)to = 20; to = to + 4; *(int*)to = 17; to = to + 4;
+    *(int*)to = 23; to = to + 4; __v_rel = to; to = to + 4;
     *(int*)to = 0; to = to + 8;
 
 		// XXX
@@ -124,8 +139,8 @@ int main() {
 
 		char *shstrtab = "\0.text\0.data\0.bss\0.shstrtab\0.symtab\0.strtab\0"
 											".interp\0.dynamic\0.dynsym\0.dynstr\0.rel.plt\0.plt\0"
-											".got\0";
-		int shstrtab_size = 96;
+											".got\0.rodata\0";
+		int shstrtab_size = 104;
     memcpy(to, shstrtab, shstrtab_size);
 		to += shstrtab_size;
 
@@ -195,50 +210,48 @@ int main() {
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 6;  *to++ = 0;      
-		// symtab for .dymsym
+		// symtab for .dynamic
     *(int*)to = 0;         to = to + 4; 
 		*(int*)to = *(int*)v_dym; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 7;  *to++ = 0;      
-		/*
 		// symtab for .dymsym
     *(int*)to = 0;         to = to + 4; 
-		*(int*)to = *(int*)v_dym; to = to + 4;
+		*(int*)to = (int)v_dynsym; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 8;  *to++ = 0;      
-		// symtab for .dymsym
+		// symtab for .dymstr
     *(int*)to = 0;         to = to + 4; 
-		*(int*)to = *(int*)v_dym; to = to + 4;
+		*(int*)to = (int)v_dynstr; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 9;  *to++ = 0;      
-		// symtab for .dymsym
+		// symtab for .rel.plt
     *(int*)to = 0;         to = to + 4; 
-		*(int*)to = *(int*)v_dym; to = to + 4;
+		char* symtab_v_rel = to; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 10;  *to++ = 0;      
-		// symtab for .dymsym
+		// symtab for .plt
     *(int*)to = 0;         to = to + 4; 
-		*(int*)to = *(int*)v_dym; to = to + 4;
+		char* symtab_v_plt = to; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 11;  *to++ = 0;      
-		// symtab for .dymsym
+		// symtab for .got
     *(int*)to = 0;         to = to + 4; 
-		*(int*)to = *(int*)v_dym; to = to + 4;
+		char* symtab_v_got = to; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(0, 3); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 12;  *to++ = 0;      
-		*/
 		char* v_start;
 		// symtab for _start
     *(int*)to = 1;         to = to + 4; 
@@ -264,69 +277,36 @@ int main() {
 
 
 		s_symtab = (int)to - (int)v_symtab;
-//------------------------------.plt
-		char* v_plt = to;
-		char* plt_off = (char*)(to - buf);
-    *(int*)to = 0xe52de004;         to = to + 4; // push {lr}
-    char* to_got_movw = to;         to = to + 4; // bl .got
-    char* to_got_movt = to;         to = to + 4; // bl .got
-    *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
-
-		// printf
-    char* to_printf_movw = to;         to = to + 4; // bl printf
-    char* to_printf_movt = to;         to = to + 4; // bl printf
-    *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
-		
-		// printf
-    char* to_rand_movw = to;         to = to + 4; // bl printf
-    char* to_rand_movt = to;         to = to + 4; // bl printf
-    *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
-
-		int plt_size = (int)to - (int)v_plt;
-//		*(int*) _s_plt = plt_size;
 
 
-//-------------------------
+//-------------------------.got
 		char* v_got = to;
 		*(int*) _v_got = (int)to;
-		*(int*)to_got_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)to_got_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
+		*(int*) symtab_v_got = (int)to;
 		char* got_off = (char*)(to - buf);
 
     *(int*)to = *(int*)v_dym;         to = to + 4; 
-		to += 8;	// reserved 2 and 3 entry for linker
+		to += 4;	// reserved 2 and 3 entry for linker
+		/*
+		*(int*)to_got_movw = 0xe300a000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
+		*(int*)to_got_movt = 0xe340a000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
+		*/
+    char* to_got_movw = to;         
+    char* to_got_movt = to;         
+		to += 4;	// reserved 2 and 3 entry for linker
 
 		char* got_printf = to;
-		*(int*)to_printf_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)to_printf_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
 
-		*(int*)bl_printf_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)bl_printf_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
-    *(int*)to = (int)v_plt;         to = to + 4; //	.plt entry
+		char * v_plt1 = to; to += 4;
+//    *(int*)to = (int)v_plt;         to = to + 4; //	.plt entry
 
 		char* _got_rand = to;
-		*(int*)to_rand_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)to_rand_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
 
-		*(int*)bl_rand_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)bl_rand_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
-    *(int*)to = (int)v_plt;         to = to + 4; //	.plt entry
+		char * v_plt2 = to; to+=4;
+//    *(int*)to = (int)v_plt;         to = to + 4; //	.plt entry
     to = to + 4; // end with 0x0
 		int got_size = (int)to - (int)v_got;
 
-//---------------------------------------
-		char* v_rel = to;
-		*(int*) _v_rel = (int)to;
-//		*(int*) __v_rel = (int)to;
-		char* rel_off = (char*)(to - buf);
-    *(int*)to = (int)got_printf;         to = to + 4; 
-    *(int*)to = 0x16 | 1 << 8 ;					 to = to + 4; // 0x16 R_ARM_JUMP_SLOT | .dymsyn index << 8
-    *(int*)to = (int)_got_rand;         to = to + 4; 
-    *(int*)to = 0x16 | 2 << 8 ;					 to = to + 4; // 0x16 R_ARM_JUMP_SLOT | .dymsyn index << 8
-		
-		int rel_size = (int)to - (int)v_rel;
-		*(int*) _s_rel = rel_size;
-		*(int*) __s_rel = 8;
 //-------------------------------------------
     to =    (char*)(((int)to + (4095)) & -4096);
 
@@ -340,12 +320,100 @@ int main() {
 
 		
 
-    memcpy(to, code,  je - code);
+		char *code_r = to;
+//    memcpy(to, code,  je - code);
 		text_off = (char*)(to - buf);
 		to += je - code;
 
+		
+//------------------------------.plt
+		char* v_plt = to;
+		*(int*) v_plt1 = (int)to;
+		*(int*) v_plt2 = (int)to;
+		*(int*) symtab_v_plt = (int)to;
+//		*(int*) _v_plt = (int)to;
+		char* plt_off = (char*)(to - buf);
+
+		/*
+		*(int*)to_rand_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
+		*(int*)to_rand_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
+		*(int*)to_printf_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
+		*(int*)to_printf_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
+		*/
+    *(int*)to = 0xe52de004;         to = to + 4; // push {lr}
+		*(int*)to = 0xe300a000 | (0xfff & (int)(to_got_movw)) | (0xf0000 & ((int)(to_got_movw) << 4));
+		to = to + 4;
+		*(int*)to = 0xe340a000 | (0xfff & ((int)(to_got_movt)>>16)) | (0xf0000 & ((int)(to_got_movt) >> 12));
+		to = to + 4;
+//    char* to_got_movw = to;         to = to + 4; // bl .got
+//    char* to_got_movt = to;         to = to + 4; // bl .got
+    *(int*)to = 0xe1a0e00a;					to = to + 4;// mov lr,r10
+    *(int*)to = 0xe59ef000;					to = to + 4;// ldr pc, [lr]
+
+		// printf
+		*(int*)bl_printf_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
+		*(int*)bl_printf_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
+
+		*(int*) to = 0xe300c000 | (0xfff & (int)(got_printf)) | (0xf0000 & ((int)(got_printf) << 4));
+		to += 4;
+		*(int*) to = 0xe340c000 | (0xfff & ((int)(got_printf)>>16)) | (0xf0000 & ((int)(got_printf) >> 12));
+		to += 4;
+ //   *(int*)to = to_plt_movw;					to = to + 4;// ldr		pc, [ip]
+ //   *(int*)to = to_plt_movt;					to = to + 4;// ldr		pc, [ip]
+		/*
+    char* to_printf_movw = to;         to = to + 4; // bl printf
+    char* to_printf_movt = to;         to = to + 4; // bl printf
+		*/
+    *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
+//    *(int*)to = 0xe1a0f00c;					to = to + 4;// mov		pc, ip
+		
+		// rand
+		*(int*)bl_rand_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
+		*(int*)bl_rand_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
+		/*
+    char* to_rand_movw = to;         to = to + 4; // bl printf
+    char* to_rand_movt = to;         to = to + 4; // bl printf
+		*/
+		*(int*) to = 0xe300c000 | (0xfff & (int)(_got_rand)) | (0xf0000 & ((int)(_got_rand) << 4));
+		to += 4;
+		*(int*) to = 0xe340c000 | (0xfff & ((int)(_got_rand)>>16)) | (0xf0000 & ((int)(_got_rand) >> 12));
+		to += 4;
+//    *(int*)to = to_plt_movw;					to = to + 4;// ldr		pc, [ip]
+//    *(int*)to = to_plt_movt;					to = to + 4;// ldr		pc, [ip]
+    *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
+//    *(int*)to = 0xe1a0f00c;					to = to + 4;// mov		pc, ip
+
+		int plt_size = (int)to - (int)v_plt;
+//		*(int*) _s_plt = plt_size;
+
+//---------------------------------------
+		char* v_rel = to;
+		*(int*) symtab_v_rel = (int)to;
+		*(int*) _v_rel = (int)to;
+		*(int*) __v_rel = (int)to;
+		char* rel_off = (char*)(to - buf);
+    *(int*)to = (int)got_printf;         to = to + 4; 
+    *(int*)to = 0x16 | 1 << 8 ;					 to = to + 4; // 0x16 R_ARM_JUMP_SLOT | .dymsyn index << 8
+    *(int*)to = (int)_got_rand;         to = to + 4; 
+    *(int*)to = 0x16 | 2 << 8 ;					 to = to + 4; // 0x16 R_ARM_JUMP_SLOT | .dymsyn index << 8
+		
+		int rel_size = (int)to - (int)v_rel;
+		*(int*) _s_rel = rel_size;
+		*(int*) __s_rel = 8;
+
+
+		char* _rodata = "Hello world!!\n\0";
+		char*  v_rodata = to;
+		char* rodata_off = (char*)(to - buf);
+		int rodata_size = 15;
+    memcpy(to, _rodata, rodata_size);
+		to += rodata_size;
+
 		*(int*) s_text = (int)to - (int)_text;
 		*(int*) (s_text+4) = (int)to - (int)_text;
+
+    memcpy(code_r, code,  je - code);
+
 
     to =    (char*)(((int)to + (4095)) & -4096);
 
@@ -442,7 +510,7 @@ int main() {
 
 		// .rel.plt	10
     *(int*)to = 77;         to = to + 4; *(int*)to = 9;			to = to + 4;
-    *(int*)to = 2 ; to = to + 4;
+    *(int*)to = 2 | 0x40 ; to = to + 4;
     *(int*)to = (int)v_rel; to = to + 4;
     *(int*)to = (int)rel_off;		to = to + 4;
     *(int*)to = rel_size;				to = to + 4;
@@ -466,6 +534,15 @@ int main() {
     *(int*)to = got_size;				to = to + 4;
     *(int*)to = 0;         to = to + 4; *(int*)to = 0;			to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 4;			to = to + 4;
+
+		// .rodata	13
+    *(int*)to = 96;         to = to + 4; *(int*)to = 1;			to = to + 4;
+    *(int*)to = 2; to = to + 4;
+    *(int*)to = (int)v_rodata; to = to + 4;
+    *(int*)to = (int)rodata_off;		to = to + 4;
+    *(int*)to = rodata_size;				to = to + 4;
+    *(int*)to = 0;         to = to + 4; *(int*)to = 0;			to = to + 4;
+    *(int*)to = 4;         to = to + 4; *(int*)to = 0;			to = to + 4;
 
     write(1, buf, to - buf);
 
