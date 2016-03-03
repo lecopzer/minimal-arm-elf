@@ -17,13 +17,15 @@ int main() {
 //    *(int*)je = 0xe3a07001;       // mov     r7, #1
 //    *(int*)je = 0xe1a0700d;       // mov     r7, sp
 //    je +=4;
-    *(int*)je = 0xe3070078;       // mov     r0, #1
+		char* code_hello_w = je;
+//    *(int*)je = 0xe3070078;       // movt     r0, addr of helloworld
     je +=4;
-    *(int*)je = 0xe34f0664;       // mov     r0, #1
+		char* code_hello_t = je;
+//    *(int*)je = 0xe34f0664;       // movw     r0, addr of helloworld
     je +=4;
-    *(int*)je = 0xe3a01000;       // mov     r0, #1
+    *(int*)je = 0xe3a01000;       // mov     r1, #0
     je +=4;
-    *(int*)je = 0xe3a02000;       // mov     r0, #1
+    *(int*)je = 0xe3a02000;       // mov     r2, #0
     je +=4;
 		char* bl_printf_movw = je;
     je +=4;
@@ -403,6 +405,8 @@ int main() {
 
 
 		char* _rodata = "Hello world!!\n\0";
+		*(int*)code_hello_w = 0xe3000000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
+		*(int*)code_hello_t = 0xe3400000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
 		char*  v_rodata = to;
 		char* rodata_off = (char*)(to - buf);
 		int rodata_size = 15;
