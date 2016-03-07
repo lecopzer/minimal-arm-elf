@@ -14,14 +14,9 @@ int main() {
     buf = malloc(poolsz);
     o = buf = (char*)(((int)buf + ALIGN - 1)  & -ALIGN);
     je = code;
-//    *(int*)je = 0xe3a07001;       // mov     r7, #1
-//    *(int*)je = 0xe1a0700d;       // mov     r7, sp
-//    je +=4;
-		char* code_hello_w = je;
-//    *(int*)je = 0xe3070078;       // movt     r0, addr of helloworld
+		char* code_hello_w = je;      // movt     r0, addr of helloworld
     je +=4;
-		char* code_hello_t = je;
-//    *(int*)je = 0xe34f0664;       // movw     r0, addr of helloworld
+		char* code_hello_t = je;;     // movw     r0, addr of helloworld
     je +=4;
     *(int*)je = 0xe3a01000;       // mov     r1, #0
     je +=4;
@@ -36,6 +31,7 @@ int main() {
 //    *(int*)je = 0xe59cf000;       // ldr		pc, [ip]
     *(int*)je = 0xe1a0f00c;       // mov		pc, ip
     je +=4;
+		// XXX: rand() has no effect here
 		char* bl_rand_movw = je;
     je +=4;
 		char* bl_rand_movt = je;
@@ -262,14 +258,14 @@ int main() {
     *to = ELF32_ST_INFO(1, 2); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 2;  *to++ = 0;      
-		// .dynsym for printf
+		// .symtab for printf
     *(int*)to = 8;         to = to + 4; 
 		*(int*)to = 0; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
     *to = ELF32_ST_INFO(1, 2); to = to + 1; 
 	  *to = 0; to++;
     *to++ = 0;  *to++ = 0;      
-		// .dynsym for printf
+		// .symtab for rand
     *(int*)to = 15;         to = to + 4; 
 		*(int*)to = 0; to = to + 4;
     *(int*)to = 0;         to = to + 4; 
@@ -289,27 +285,20 @@ int main() {
 
     *(int*)to = *(int*)v_dym;         to = to + 4; 
 		to += 4;	// reserved 2 and 3 entry for linker
-		/*
-		*(int*)to_got_movw = 0xe300a000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)to_got_movt = 0xe340a000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
-		*/
     char* to_got_movw = to;         
     char* to_got_movt = to;         
 		to += 4;	// reserved 2 and 3 entry for linker
 
 		char* got_printf = to;
-
 		char * v_plt1 = to; to += 4;
-//    *(int*)to = (int)v_plt;         to = to + 4; //	.plt entry
 
 		char* _got_rand = to;
-
 		char * v_plt2 = to; to+=4;
-//    *(int*)to = (int)v_plt;         to = to + 4; //	.plt entry
+
     to = to + 4; // end with 0x0
 		int got_size = (int)to - (int)v_got;
 
-//-------------------------------------------
+//-------------------------------------------.text
     to =    (char*)(((int)to + (4095)) & -4096);
 
 		char *_text = to;
@@ -323,7 +312,6 @@ int main() {
 		
 
 		char *code_r = to;
-//    memcpy(to, code,  je - code);
 		text_off = (char*)(to - buf);
 		to += je - code;
 
@@ -333,22 +321,13 @@ int main() {
 		*(int*) v_plt1 = (int)to;
 		*(int*) v_plt2 = (int)to;
 		*(int*) symtab_v_plt = (int)to;
-//		*(int*) _v_plt = (int)to;
 		char* plt_off = (char*)(to - buf);
 
-		/*
-		*(int*)to_rand_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)to_rand_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
-		*(int*)to_printf_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
-		*(int*)to_printf_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
-		*/
     *(int*)to = 0xe52de004;         to = to + 4; // push {lr}
 		*(int*)to = 0xe300a000 | (0xfff & (int)(to_got_movw)) | (0xf0000 & ((int)(to_got_movw) << 4));
 		to = to + 4;
 		*(int*)to = 0xe340a000 | (0xfff & ((int)(to_got_movt)>>16)) | (0xf0000 & ((int)(to_got_movt) >> 12));
 		to = to + 4;
-//    char* to_got_movw = to;         to = to + 4; // bl .got
-//    char* to_got_movt = to;         to = to + 4; // bl .got
     *(int*)to = 0xe1a0e00a;					to = to + 4;// mov lr,r10
     *(int*)to = 0xe59ef000;					to = to + 4;// ldr pc, [lr]
 
@@ -360,35 +339,20 @@ int main() {
 		to += 4;
 		*(int*) to = 0xe340c000 | (0xfff & ((int)(got_printf)>>16)) | (0xf0000 & ((int)(got_printf) >> 12));
 		to += 4;
- //   *(int*)to = to_plt_movw;					to = to + 4;// ldr		pc, [ip]
- //   *(int*)to = to_plt_movt;					to = to + 4;// ldr		pc, [ip]
-		/*
-    char* to_printf_movw = to;         to = to + 4; // bl printf
-    char* to_printf_movt = to;         to = to + 4; // bl printf
-		*/
     *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
-//    *(int*)to = 0xe1a0f00c;					to = to + 4;// mov		pc, ip
 		
 		// rand
 		*(int*)bl_rand_movw = 0xe300c000 | (0xfff & (int)(to)) | (0xf0000 & ((int)(to) << 4));
 		*(int*)bl_rand_movt = 0xe340c000 | (0xfff & ((int)(to)>>16)) | (0xf0000 & ((int)(to) >> 12));
-		/*
-    char* to_rand_movw = to;         to = to + 4; // bl printf
-    char* to_rand_movt = to;         to = to + 4; // bl printf
-		*/
 		*(int*) to = 0xe300c000 | (0xfff & (int)(_got_rand)) | (0xf0000 & ((int)(_got_rand) << 4));
 		to += 4;
 		*(int*) to = 0xe340c000 | (0xfff & ((int)(_got_rand)>>16)) | (0xf0000 & ((int)(_got_rand) >> 12));
 		to += 4;
-//    *(int*)to = to_plt_movw;					to = to + 4;// ldr		pc, [ip]
-//    *(int*)to = to_plt_movt;					to = to + 4;// ldr		pc, [ip]
     *(int*)to = 0xe59cf000;					to = to + 4;// ldr		pc, [ip]
-//    *(int*)to = 0xe1a0f00c;					to = to + 4;// mov		pc, ip
 
 		int plt_size = (int)to - (int)v_plt;
-//		*(int*) _s_plt = plt_size;
 
-//---------------------------------------
+//---------------------------------------.rel
 		char* v_rel = to;
 		*(int*) symtab_v_rel = (int)to;
 		*(int*) _v_rel = (int)to;
