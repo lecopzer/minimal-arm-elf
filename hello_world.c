@@ -60,7 +60,7 @@ int main() {
     *(int*)o = 0x5000402;   o = o + 4; // e_flags
     *o++ = 52; *o++ = 0;
     *o++ = 32; *o++ = 0; *o++ = 4; *o++ = 0; // e_phentsize & e_phnum
-    *o++ = 40; *o++ = 0; *o++ = 14; *o++ = 0; // e_shentsize & e_shnum
+    *o++ = 40; *o++ = 0; *o++ = 12; *o++ = 0; // e_shentsize & e_shnum
     *o++ =  1; *o++ = 0;
 		phdr = o;
 
@@ -116,7 +116,7 @@ int main() {
     *(int*)to = 5;	to = to + 4; v_strtab = to;   to = to + 4;
     *(int*)to = 10; to = to + 4; s_strtab = to;		to = to + 4;
     *(int*)to = 6;	to = to + 4; _v_symtab = to;		to = to + 4;
-    *(int*)to = 11; to = to + 4; _s_symtab = to;		to = to + 4;
+    *(int*)to = 11; to = to + 4; *(int*)to = 16;		to = to + 4;
     *(int*)to = 1; to = to + 4; *(int*)to = 8; to = to + 4;
     *(int*)to = 1; to = to + 4; *(int*)to = 18; to = to + 4;
     *(int*)to = 17; to = to + 4; _v_rel = to; to = to + 4;
@@ -141,12 +141,6 @@ int main() {
 		int shstrtab_size = 104;
     memcpy(to, shstrtab, shstrtab_size);
 		to += shstrtab_size;
-
-		char *strtab = "\0_start\0printf\0rand\0";
-		int strtab_size = 20;
-		strtab_off = (char*)(to - buf);
-    memcpy(to, strtab, strtab_size);
-		to += strtab_size;
 
 		char* v_dynstr = to;
 		*(int*)v_strtab = (int)to;
@@ -180,107 +174,11 @@ int main() {
     *to++ = 0;  *to++ = 0;      
 
 		s_dynsym = (int)to - (int)v_dynsym;
-		*(int*)_s_symtab = (int)to - (int)v_dynsym;
-
-		symtab_off = (char*)(to - buf);
-		v_symtab = to;
-		// first symtab must 0
-		memset(to, 0, 16);
-		to += 16;
-		// symtab for .text
-    *(int*)to = 0;         to = to + 4; 
-		*(int*)to = (int)to + 32 + 12; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 2;  *to++ = 0;      
-		// symtab for .data
-    *(int*)to = 0;         to = to + 4; 
-		*(int*)to = (int)_data; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 3;  *to++ = 0;      
-		// symtab for .interp
-    *(int*)to = 0;         to = to + 4; 
-		*(int*)to = (int)_data; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 6;  *to++ = 0;      
-		// symtab for .dynamic
-    *(int*)to = 0;         to = to + 4; 
-		*(int*)to = *(int*)v_dym; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 7;  *to++ = 0;      
-		// symtab for .dymsym
-    *(int*)to = 0;         to = to + 4; 
-		*(int*)to = (int)v_dynsym; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 8;  *to++ = 0;      
-		// symtab for .dymstr
-    *(int*)to = 0;         to = to + 4; 
-		*(int*)to = (int)v_dynstr; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 9;  *to++ = 0;      
-		// symtab for .rel.plt
-    *(int*)to = 0;         to = to + 4; 
-		char* symtab_v_rel = to; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 10;  *to++ = 0;      
-		// symtab for .plt
-    *(int*)to = 0;         to = to + 4; 
-		char* symtab_v_plt = to; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 11;  *to++ = 0;      
-		// symtab for .got
-    *(int*)to = 0;         to = to + 4; 
-		char* symtab_v_got = to; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(0, 3); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 12;  *to++ = 0;      
-		char* v_start;
-		// symtab for _start
-    *(int*)to = 1;         to = to + 4; 
-		v_start = to; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(1, 2); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 2;  *to++ = 0;      
-		// .symtab for printf
-    *(int*)to = 8;         to = to + 4; 
-		*(int*)to = 0; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(1, 2); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 0;  *to++ = 0;      
-		// .symtab for rand
-    *(int*)to = 15;         to = to + 4; 
-		*(int*)to = 0; to = to + 4;
-    *(int*)to = 0;         to = to + 4; 
-    *to = ELF32_ST_INFO(1, 2); to = to + 1; 
-	  *to = 0; to++;
-    *to++ = 0;  *to++ = 0;      
-
-
-		s_symtab = (int)to - (int)v_symtab;
-
+//		*(int*)_s_symtab = (int)to - (int)v_dynsym;
 
 //-------------------------.got
 		char* v_got = to;
 		*(int*) _v_got = (int)to;
-		*(int*) symtab_v_got = (int)to;
 		char* got_off = (char*)(to - buf);
 
     *(int*)to = *(int*)v_dym;         to = to + 4; 
@@ -304,7 +202,6 @@ int main() {
 		char *_text = to;
 		*(int*) v_text_record = (int)to;
 		*(int*) entry = (int)to;
-		*(int*) v_start = (int)to;
 		*(int*) (v_text_record+4) = (int)to;
 		*(int*) v_data_size = (int)_text - (int)_data;
 		*(int*) (v_data_size+4) = (int)_text - (int)_data;
@@ -320,7 +217,6 @@ int main() {
 		char* v_plt = to;
 		*(int*) v_plt1 = (int)to;
 		*(int*) v_plt2 = (int)to;
-		*(int*) symtab_v_plt = (int)to;
 		char* plt_off = (char*)(to - buf);
 
     *(int*)to = 0xe52de004;         to = to + 4; // push {lr}
@@ -354,7 +250,6 @@ int main() {
 
 //---------------------------------------.rel
 		char* v_rel = to;
-		*(int*) symtab_v_rel = (int)to;
 		*(int*) _v_rel = (int)to;
 		*(int*) __v_rel = (int)to;
 		char* rel_off = (char*)(to - buf);
@@ -422,52 +317,34 @@ int main() {
     *(int*)to = 0;         to = to + 4; *(int*)to = 0;     to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 0;     to = to + 4;
 
-		// .symtab		4
-    *(int*)to = 28;         to = to + 4; *(int*)to = 2;			to = to + 4;
-    *(int*)to = 0; to = to + 4;
-    *(int*)to = 0; to = to + 4;
-    *(int*)to = (int)symtab_off;		to = to + 4;
-    *(int*)to = s_symtab;						to = to + 4;
-    *(int*)to = 5;         to = to + 4; *(int*)to = 93;     to = to + 4;
-    *(int*)to = 4;         to = to + 4; *(int*)to = 16;     to = to + 4;
-
-		// .strtab	5
-    *(int*)to = 36;         to = to + 4; *(int*)to = 3;			to = to + 4;
-    *(int*)to = 0; to = to + 4;
-    *(int*)to = 0; to = to + 4;
-    *(int*)to = (int)strtab_off;		to = to + 4;
-    *(int*)to = strtab_size;				to = to + 4;
-    *(int*)to = 0;         to = to + 4; *(int*)to = 0;			to = to + 4;
-    *(int*)to = 1;         to = to + 4; *(int*)to = 0;			to = to + 4;
-
-		// .interp	6
+		// .interp	4
     *(int*)to = 44;         to = to + 4; *(int*)to = 1; to = to + 4;
     *(int*)to = 2; to = to + 4;
     *(int*)to = (int)_data;  to = to + 4;
-    *(int*)to = 52 + 32 * 3; to = to + 4;
+    *(int*)to = 52 + 32 * 4; to = to + 4;
     *(int*)to = 25; to = to + 4;
     *(int*)to = 0;         to = to + 4; *(int*)to = 0;     to = to + 4;
     *(int*)to = 1;         to = to + 4; *(int*)to = 0;     to = to + 4;
 
-		// .dynamic	7
+		// .dynamic	5
     *(int*)to = 52;         to = to + 4; *(int*)to = 6; to = to + 4;
-    *(int*)to = 2; to = to + 4;
+    *(int*)to = 3; to = to + 4;
     *(int*)to = *(int*)v_dym;  to = to + 4;
     *(int*)to = dym_off; to = to + 4;
     *(int*)to = *(int*)s_dym; to = to + 4;
-    *(int*)to = 9;         to = to + 4; *(int*)to = 0;     to = to + 4;
+    *(int*)to = 7;         to = to + 4; *(int*)to = 0;     to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 0;     to = to + 4;
 
-		// .dynsym		8
+		// .dynsym	6
     *(int*)to = 61;         to = to + 4; *(int*)to = 11;			to = to + 4;
     *(int*)to = 2; to = to + 4;
     *(int*)to = (int)v_dynsym; to = to + 4;
     *(int*)to = (int)dynsym_off;		to = to + 4;
     *(int*)to = s_dynsym;						to = to + 4;
-    *(int*)to = 9;         to = to + 4; *(int*)to = 123;     to = to + 4;
+    *(int*)to = 7;         to = to + 4; *(int*)to = 123;     to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 16;     to = to + 4;
 
-		// .dynstr	9
+		// .dynstr	7
     *(int*)to = 69;         to = to + 4; *(int*)to = 3;			to = to + 4;
     *(int*)to = 2; to = to + 4;
     *(int*)to = (int)v_dynstr; to = to + 4;
@@ -476,16 +353,16 @@ int main() {
     *(int*)to = 0;         to = to + 4; *(int*)to = 0;			to = to + 4;
     *(int*)to = 1;         to = to + 4; *(int*)to = 0;			to = to + 4;
 
-		// .rel.plt	10
+		// .rel.plt	8
     *(int*)to = 77;         to = to + 4; *(int*)to = 9;			to = to + 4;
     *(int*)to = 2 | 0x40 ; to = to + 4;
     *(int*)to = (int)v_rel; to = to + 4;
     *(int*)to = (int)rel_off;		to = to + 4;
     *(int*)to = rel_size;				to = to + 4;
-    *(int*)to = 8;         to = to + 4; *(int*)to = 11;			to = to + 4;
+    *(int*)to = 6;         to = to + 4; *(int*)to = 9;			to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 0x8;			to = to + 4;
 
-		// .plt	11
+		// .plt	9
     *(int*)to = 86;         to = to + 4; *(int*)to = 1;			to = to + 4;
     *(int*)to = 6; to = to + 4;
     *(int*)to = (int)v_plt; to = to + 4;
@@ -494,7 +371,7 @@ int main() {
     *(int*)to = 0;         to = to + 4; *(int*)to = 0;			to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 4;			to = to + 4;
 
-		// .got	12
+		// .got	10
     *(int*)to = 91;         to = to + 4; *(int*)to = 1;			to = to + 4;
     *(int*)to = 3; to = to + 4;
     *(int*)to = (int)v_got; to = to + 4;
@@ -503,7 +380,7 @@ int main() {
     *(int*)to = 0;         to = to + 4; *(int*)to = 0;			to = to + 4;
     *(int*)to = 4;         to = to + 4; *(int*)to = 4;			to = to + 4;
 
-		// .rodata	13
+		// .rodata	11
     *(int*)to = 96;         to = to + 4; *(int*)to = 1;			to = to + 4;
     *(int*)to = 2; to = to + 4;
     *(int*)to = (int)v_rodata; to = to + 4;
