@@ -35,7 +35,7 @@ int main() {
 
   // program header
   *(int*)o = 1;                   o = o + 4;  *(int*)o = 52 + 32;  o = o + 4;
-  *(int*)o = (int)o + 24 ;				o = o + 4;
+  *(int*)o = (int)o + 24;         o = o + 4;
   *(int*)o = (int)o + 24 - 4;			o = o + 4;
   *(int*)o = (je - code);         o = o + 4;
   *(int*)o = (je - code);         o = o + 4;
