@@ -1,3 +1,10 @@
+## Introduction
+  I write a program byte by byte. 
+  This helps us understand how ELF is constructed and the way to relocate outer symbols.
+
+  `main.c`: Basic ELF construction, is only an empty program return 0.
+  `hello_world.c`: Advanced to reloating symbol such as printf by linker.  
+
 ## Prerequest                                                                                                   
 	arm-linux-gnueabihf-gcc
 	qemu-arm
