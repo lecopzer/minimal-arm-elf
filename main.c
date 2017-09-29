@@ -18,13 +18,13 @@ int main() {
   *(int*)je = 0xef000000;       // svc 0
   je +=4;
 
-	// elf header
+  // elf header
   *o++ = 0x7f; *o++ = 'E'; *o++ = 'L'; *o++ = 'F';
   *o++ = 1;    *o++ = 1;   *o++ = 1;   *o++ = 0;
   o = o + 8;
   *o++ = 2; *o++ = 0; *o++ = 40; *o++ = 0; // e_type 2 = executable & e_machine 40 = ARM
   *(int*)o = 1;           o = o + 4;
-  entry = o;   o = o + 4;            // e_entry
+  entry = o;              o = o + 4; // e_entry
   *(int*)o = 52;          o = o + 4; // e_phoff
   *(int*)o = 0;           o = o + 4; // e_shoff
   *(int*)o = 0x5000402;   o = o + 4; // e_flags
@@ -36,7 +36,7 @@ int main() {
   // program header
   *(int*)o = 1;                   o = o + 4;  *(int*)o = 52 + 32;  o = o + 4;
   *(int*)o = (int)o + 24;         o = o + 4;
-  *(int*)o = (int)o + 24 - 4;			o = o + 4;
+  *(int*)o = (int)o + 24 - 4;     o = o + 4;
   *(int*)o = (je - code);         o = o + 4;
   *(int*)o = (je - code);         o = o + 4;
   *(int*)o = 5;                   o = o + 4;  *(int*)o = 0x1000;   o = o + 4;
