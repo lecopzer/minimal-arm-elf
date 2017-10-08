@@ -199,7 +199,7 @@ int main() {
   int got_size = (int)to - (int)v_got;
 
 //-------------------------------------------.text
-  to =    (char*)(((int)to + (4095)) & -4096);
+  to =    (char*)(((int)to + (ALIGN - 1)) & -ALIGN);
 
   char *_text = to;
   *(int*) v_text_record = (int)to;
@@ -275,12 +275,12 @@ int main() {
   to += rodata_size;
 
   *(int*) s_text = (int)to - (int)_text;
-  *(int*) (s_text+4) = (int)to - (int)_text;
+  *(int*) (s_text + 4) = (int)to - (int)_text;
 
   memcpy(code_r, code,  je - code);
 
 
-  to =    (char*)(((int)to + (4095)) & -4096);
+  to =    (char*)(((int)to + (ALIGN - 1)) & -ALIGN);
 
   // shdr
   // index 0
