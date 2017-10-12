@@ -2,17 +2,18 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <unistd.h>
-#define ALIGN 4096
+#define ALIGN 0x1
 #define ELF32_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
 
 int main() {
 
   char *o, *buf, *code, *entry, *je, *tje, *to, *phdr;
-  char *shstrtab_off, *strtab_off,*data_off, *text_off, *symtab_off;
+  char *shstrtab_off, *strtab_off,*data_off, *text_off, *symtab_off; 
+  unsigned int *shdr_off;
   const int poolsz = 256 * 1024;
   code = malloc(poolsz);
   buf = malloc(poolsz);
-  o = buf = (char*)(((int)buf + ALIGN - 1)  & -ALIGN);
+  o = buf = (char*)(((int)buf + 4096 -1)  & -4096);
   je = code;
   char* code_hello_w = je;      // movt     r0, addr of helloworld
   je +=4;
@@ -56,8 +57,9 @@ int main() {
   *(int*)o = 1;           o = o + 4;
   entry = o;              o = o + 4; // e_entry
   *(int*)o = 52;          o = o + 4; // e_phoff
-  *(int*)o = 0x2000;      o = o + 4; // e_shoff
-  *(int*)o = 0x5000402;   o = o + 4; // e_flags
+  shdr_off = (unsigned int*)o;           o = o + 4; // e_shoff
+//  *(int*)o = 0x2000;      o = o + 4; // e_shoff
+  *(int*)o = 0x5000400;   o = o + 4; // e_flags
   *o++ = 52; *o++ = 0;
   *o++ = 32; *o++ = 0; *o++ = 4;  *o++ = 0; // e_phentsize & e_phnum
   *o++ = 40; *o++ = 0; *o++ = 12; *o++ = 0; // e_shentsize & e_shnum
@@ -68,12 +70,15 @@ int main() {
   to = phdr;
   // program header
   // PT_LOAD for code
-  *(int*)to = 1;      to = to + 4;  *(int*)to = 0x1000; to = to + 4;
-  v_text_record = to; to = to + 4;
+  *(int*)to = 1;                                        to = to + 4;
+  // offset  
+  *(int*)to = ALIGN;                                    to = to + 4;
+  v_text_record = to;                                   to = to + 4;
   *(int*)to = (int)to + 123 + 32 +24 + 32 - 4;          to = to + 4;
   s_text = to;                                          to = to + 4;
   *(int*)to = (je - code);                              to = to + 4;
-  *(int*)to = 5;      to = to + 4;  *(int*)to = 0x1000; to = to + 4;
+  *(int*)to = 5;                                        to = to + 4;  
+  *(int*)to = ALIGN;                                    to = to + 4;  
 
   char* v_data_size;
   // PT_LOAD for data
@@ -82,9 +87,9 @@ int main() {
   *(int*)to = (int)to + 24 + 32*2;                      to = to + 4;
   *(int*)to = (int)to + 24 + 32*2 -4;                   to = to + 4;
   v_data_size = to;                                     to = to + 4;
-  *(int*)to = 0x1000;                                   to = to + 4;
+  *(int*)to = 0x8;                                      to = to + 4;
   *(int*)to = 6;                                        to = to + 4;
-  *(int*)to = 0x1000;                                   to = to + 4;
+  *(int*)to = 0x8;                                      to = to + 4;
 
   // PT_INTERP
   *(int*)to = 3;         to = to + 4; *(int*)to = 52 + 32 * 4; to = to + 4;
@@ -204,14 +209,15 @@ int main() {
   char *_text = to;
   *(int*) v_text_record = (int)to;
   *(int*) entry = (int)to;
-  *(int*) (v_text_record+4) = (int)to;
+  *(int*) (v_text_record + 4) = (int)to;
   *(int*) v_data_size = (int)_text - (int)_data;
-  *(int*) (v_data_size+4) = (int)_text - (int)_data;
+  *(int*) (v_data_size + 4) = (int)_text - (int)_data;
 
 
 
   char *code_r = to;
   text_off = (char*)(to - buf);
+  *(int*) (v_text_record - 4) = (int)text_off;
   to += je - code;
 
 
@@ -257,7 +263,7 @@ int main() {
   char* rel_off = (char*)(to - buf);
   *(int*)to = (int)got_printf;         to = to + 4;
   *(int*)to = 0x16 | 1 << 8 ;          to = to + 4; // 0x16 R_ARM_JUMP_SLOT | .dymsyn index << 8
-  *(int*)to = (int)_got_rand;         to = to + 4;
+  *(int*)to = (int)_got_rand;          to = to + 4;
   *(int*)to = 0x16 | 2 << 8 ;          to = to + 4; // 0x16 R_ARM_JUMP_SLOT | .dymsyn index << 8
 
   int rel_size = (int)to - (int)v_rel;
@@ -281,6 +287,8 @@ int main() {
 
 
   to =    (char*)(((int)to + (ALIGN - 1)) & -ALIGN);
+  
+  *shdr_off = (unsigned int)(to - buf);
 
   // shdr
   // index 0
